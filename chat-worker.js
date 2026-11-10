@@ -1,15 +1,15 @@
 // CyberLearn — AI Tutor chat proxy (Cloudflare Worker)
-// Proxies chat requests from the browser to an OmniRoute OpenAI-compatible
-// endpoint, keeping the base URL and API key server-side (never exposed to
-// the client).
+// Proxies chat requests from the browser to a FreeLLMAPI (or any
+// OpenAI-compatible) endpoint, keeping the base URL and API key server-side
+// (never exposed to the client).
 //
 // Endpoints:
 //   POST /chat  { messages: [...], model?, temperature?, max_tokens? }
-//       -> forwards to OMNIROUTE_BASE_URL + '/v1/chat/completions'
+//       -> forwards to LLM_BASE_URL + '/v1/chat/completions'
 //
 // Secrets (set via `wrangler secret put`):
-//   OMNIROUTE_BASE_URL   e.g. https://your-omniroute-host (no trailing slash)
-//   OMNIROUTE_API_KEY    (optional) the OmniRoute server key, if REQUIRE_API_KEY is on
+//   LLM_BASE_URL   e.g. https://your-freellmapi-host (no trailing slash)
+//   LLM_API_KEY    the FreeLLMAPI unified key (freellmapi-...)
 //
 // Deployment: `npx wrangler deploy`  (see wrangler.toml)
 
@@ -32,9 +32,9 @@ export default {
     if (request.method === 'OPTIONS') return cors(null, 204);
     if (request.method !== 'POST') return cors('Method not allowed', 405);
 
-    const base = (env.OMNIROUTE_BASE_URL || '').replace(/\/+$/, '');
+    const base = (env.LLM_BASE_URL || '').replace(/\/+$/, '');
     if (!base) {
-      return cors(JSON.stringify({ error: { message: 'Server not configured (missing OMNIROUTE_BASE_URL).' } }), 500, { 'Content-Type': 'application/json' });
+      return cors(JSON.stringify({ error: { message: 'Server not configured (missing LLM_BASE_URL).' } }), 500, { 'Content-Type': 'application/json' });
     }
 
     let body;
@@ -52,7 +52,7 @@ export default {
     };
 
     const headers = { 'Content-Type': 'application/json' };
-    if (env.OMNIROUTE_API_KEY) headers['Authorization'] = 'Bearer ' + env.OMNIROUTE_API_KEY;
+    if (env.LLM_API_KEY) headers['Authorization'] = 'Bearer ' + env.LLM_API_KEY;
 
     try {
       const upstream = await fetch(base + '/v1/chat/completions', {

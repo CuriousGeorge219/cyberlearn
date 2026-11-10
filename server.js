@@ -9,8 +9,10 @@ const path = require('path');
 const PORT = process.env.PORT || 8080;
 const ROOT = path.join(__dirname, 'public');
 
-// OmniRoute endpoint for the AI tutor (local dev only — production uses chat-worker.js).
-const OMNIROUTE_BASE_URL = process.env.OMNIROUTE_BASE_URL || 'http://127.0.0.1:20128';
+// FreeLLMAPI endpoint for the AI tutor (local dev only — production uses chat-worker.js).
+// Set LLM_BASE_URL / LLM_API_KEY to point at any OpenAI-compatible gateway.
+const LLM_BASE_URL = process.env.LLM_BASE_URL || 'http://127.0.0.1:3001';
+const LLM_API_KEY = process.env.LLM_API_KEY || 'freellmapi-f1318046eadb8533aace0869e735a2a72fdc2e89b7652fb8';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -25,15 +27,17 @@ const server = http.createServer((req, res) => {
   let urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
   if (urlPath === '/') urlPath = '/index.html';
 
-  // AI tutor proxy: forward /chat to OmniRoute (adds CORS for safety).
+  // AI tutor proxy: forward /chat to FreeLLMAPI (adds CORS for safety).
   if (urlPath === '/chat' && req.method === 'POST') {
     let body = '';
     req.on('data', c => { body += c; });
     req.on('end', async () => {
       try {
-        const upstream = await fetch(OMNIROUTE_BASE_URL + '/v1/chat/completions', {
+        const headers = { 'Content-Type': 'application/json' };
+        if (LLM_API_KEY) headers['Authorization'] = 'Bearer ' + LLM_API_KEY;
+        const upstream = await fetch(LLM_BASE_URL + '/v1/chat/completions', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body,
         });
         const text = await upstream.text();
