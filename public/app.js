@@ -1021,8 +1021,11 @@ function renderProgress() {
 let syncTimer = null;
 let syncDirty = false;
 
-function syncConfig() { return Store.get('cl.syncConfig', { enabled: false, url: '', key: '' }); }
-function syncActive() { const c = syncConfig(); return !!(c.enabled && c.url && c.key); }
+// The sync backend is fixed — users only need to enter their own sync key.
+const SYNC_WORKER_URL = 'https://cyberlearn-sync.dawn-meadow-7c7a.workers.dev';
+
+function syncConfig() { return Store.get('cl.syncConfig', { enabled: false, key: '' }); }
+function syncActive() { const c = syncConfig(); return !!(c.enabled && c.key); }
 function syncMeta() { return Store.get('cl.syncMeta', { updatedAt: 0 }); }
 function setSyncMeta(ts) { Store.set('cl.syncMeta', { updatedAt: ts }); }
 function syncStatus() { return Store.get('cl.syncStatus', { state: 'idle', at: 0 }); }
@@ -1039,8 +1042,7 @@ async function syncFetch(url, opts) {
   }
 }
 function syncUrl() {
-  const c = syncConfig();
-  return (c.url || '').replace(/\/+$/, '') + '/sync?key=' + encodeURIComponent(c.key || '');
+  return SYNC_WORKER_URL + '/sync?key=' + encodeURIComponent(syncConfig().key || '');
 }
 
 function currentBundle() {
@@ -1107,7 +1109,7 @@ function updateSyncIndicator() {
   if (!elx) return;
   const st = syncStatus();
   const cfg = syncConfig();
-  if (!cfg.enabled || !cfg.url || !cfg.key) { elx.innerHTML = ''; elx.className = 'sync-indicator'; return; }
+  if (!cfg.enabled || !cfg.key) { elx.innerHTML = ''; elx.className = 'sync-indicator'; return; }
   const map = { idle: '☁️', saving: '🔄', synced: '✅', error: '⚠️' };
   const base = { idle: 'Sync idle', saving: 'Syncing…', synced: 'Synced ' + (st.at ? fmtDate(st.at) : ''), error: 'Sync error' };
   elx.innerHTML = map[st.state] || '☁️';
@@ -1139,22 +1141,18 @@ function renderSync() {
 
   html += `<div class="card mb">
     <h3 style="margin-top:0">How it works</h3>
-    <p class="muted" style="font-size:13.5px">Your progress is saved to a private Cloudflare Worker + KV store using your own secret sync key. Enter the same URL and key on each device and your lessons, flashcard schedules, quiz scores, XP, rank and streak will follow you automatically.</p>
+    <p class="muted" style="font-size:13.5px">Your progress is saved to a secure cloud store using your own secret sync key. Enter the <b>same key</b> on each device and your lessons, flashcard schedules, quiz scores, XP, rank and streak will follow you automatically.</p>
     <p class="muted" style="font-size:12.5px">🔒 Treat your sync key like a password — make it long and random, and never share it.</p>
   </div>`;
 
   html += `<div class="card mb">
-    <h3 style="margin-top:0">Connection settings</h3>
-    <label class="field"><span>Worker URL</span>
-      <input id="sync-url" class="q-cloze-input" style="max-width:100%" placeholder="https://cyberlearn-sync.yourname.workers.dev" value="${esc(c.url)}" />
-      <small class="muted">The deployed <code>sync-worker.js</code> URL.</small>
-    </label>
-    <label class="field"><span>Sync key</span>
+    <h3 style="margin-top:0">Sync key</h3>
+    <label class="field">
       <div style="display:flex;gap:8px">
-        <input id="sync-key" class="q-cloze-input" style="max-width:100%;flex:1" placeholder="a long random secret" value="${esc(c.key)}" />
+        <input id="sync-key" class="q-cloze-input" style="max-width:100%;flex:1" placeholder="enter or generate your key" value="${esc(c.key)}" />
         <button class="btn sm" id="sync-gen" title="Generate a random key">🎲</button>
       </div>
-      <small class="muted">Use the same key on every device you want synced.</small>
+      <small class="muted">Use the <b>same key</b> on every device you want synced.</small>
     </label>
     <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
       <button class="btn primary" id="sync-save">💾 Save &amp; enable</button>
@@ -1168,17 +1166,16 @@ function renderSync() {
 
   el('sync-gen').onclick = () => { el('sync-key').value = generateKey(); };
   el('sync-save').onclick = () => {
-    const url = el('sync-url').value.trim();
     const key = el('sync-key').value.trim();
-    if (!url || !key) { toast('Enter both a URL and a sync key'); return; }
-    Store.set('cl.syncConfig', { enabled: true, url, key });
+    if (!key) { toast('Enter or generate a sync key'); return; }
+    Store.set('cl.syncConfig', { enabled: true, key });
     syncDirty = true;
     toast('Sync enabled');
     pullSync().then(() => pushSync(true));
     renderSync();
   };
   el('sync-disable').onclick = () => {
-    Store.set('cl.syncConfig', { enabled: false, url: c.url, key: c.key });
+    Store.set('cl.syncConfig', { enabled: false, key: c.key });
     syncDirty = false;
     toast('Sync disabled');
     updateSyncIndicator();
