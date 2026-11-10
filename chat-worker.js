@@ -13,13 +13,21 @@
 //
 // Deployment: `npx wrangler deploy -c wrangler.chat.toml`
 
+// All currently-free models on OpenRouter, most-capable first. Tried in order;
+// the router falls through when one is rate-limited or unavailable.
 const FALLBACK_MODELS = [
-  'google/gemma-4-31b-it:free',
   'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'google/gemma-4-26b-a4b-it:free',
   'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'xingchen-agi/xing4.0-29b-a4b:free',
   'cohere/north-mini-code:free',
+  'nvidia/nemotron-3.5-lightning:free',
   'dots-studio/dots-3-note-preview:free',
+  'nvidia/nemotron-3.5-super-vl:free',
   'thinkingmachines/inkling-2-small:free',
+  'recursive/flint-v1.0:free',
+  'liquid/lfm-2.5-2.6b:free',
+  'liquid/lfm-3-1.7b:free',
 ];
 
 const CORS = {
