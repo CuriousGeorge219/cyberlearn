@@ -1089,7 +1089,7 @@ function syncActive() { const c = syncConfig(); return !!(c.enabled && c.key); }
 function syncMeta() { return Store.get('cl.syncMeta', { updatedAt: 0 }); }
 function setSyncMeta(ts) { Store.set('cl.syncMeta', { updatedAt: ts }); }
 function syncStatus() { return Store.get('cl.syncStatus', { state: 'idle', at: 0 }); }
-function setSyncStatus(state, msg) { Store.set('cl.syncStatus', { state, at: Date.now(), msg: msg || '' }); updateSyncIndicator(); }
+function setSyncStatus(state, msg) { Store.set('cl.syncStatus', { state, at: Date.now(), msg: msg || '' }); updateSyncIndicator(); updateSyncStatusBox(); }
 
 // fetch with a hard timeout so a dead Worker can't hang the UI forever
 async function syncFetch(url, opts) {
@@ -1175,6 +1175,21 @@ function updateSyncIndicator() {
   elx.innerHTML = map[st.state] || '☁️';
   elx.className = 'sync-indicator ' + st.state;
   elx.title = (base[st.state] || 'Cloud sync') + (st.msg ? ' — ' + st.msg : '');
+}
+
+// Keep the status text on the Sync page in sync with the current state
+// (the page re-renders on save, but async pull/push complete after that).
+function updateSyncStatusBox() {
+  const elx = document.getElementById('sync-status');
+  if (!elx) return;
+  const st = syncStatus();
+  const map = {
+    idle: 'Not synced yet',
+    saving: 'Syncing…',
+    synced: 'Synced' + (st.at ? ' · ' + new Date(st.at).toLocaleString() : ''),
+    error: '⚠️ ' + (st.msg || 'Sync error — check the worker URL and key'),
+  };
+  elx.textContent = map[st.state] || '';
 }
 
 function generateKey() {
