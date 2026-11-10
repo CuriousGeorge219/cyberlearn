@@ -1,0 +1,12 @@
+# Cloudflare Worker configuration for CyberLearn sync.
+# 1) Create a KV namespace:  npx wrangler kv namespace create PROGRESS
+# 2) Copy the returned "id" into the line below.
+# 3) Deploy:                 npx wrangler deploy
+
+name = "cyberlearn-sync"
+main = "sync-worker.js"
+compatibility_date = "2024-11-01"
+
+[[kv_namespaces]]
+binding = "PROGRESS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"

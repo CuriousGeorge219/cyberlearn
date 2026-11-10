@@ -1,0 +1,35 @@
+# Automatically deploys the site to Cloudflare Pages on every push to `main`.
+#
+# One-time setup (see README / DEPLOY.md):
+#   1. Put this project in a GitHub repository.
+#   2. In GitHub: Settings → Secrets and variables → Actions → New repository secret,
+#      add two secrets:
+#        CLOUDFLARE_API_TOKEN  = your Cloudflare API token (edit Workers permission)
+#        CLOUDFLARE_ACCOUNT_ID = your Cloudflare account ID (dashboard → right sidebar)
+#   3. Create the Pages project first:  npx wrangler pages project create cyberlearn
+#
+# After that, every `git push` to main deploys automatically.
+
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy public --project-name=cyberlearn

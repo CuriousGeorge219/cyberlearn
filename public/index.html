@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CyberLearn — Interactive Cybersecurity Study Platform</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="read-progress" class="read-progress"></div>
+  <div id="app">
+    <aside id="sidebar">
+      <div class="brand">
+        <div class="brand-logo">🛡️</div>
+        <div class="brand-text">
+          <span class="brand-name">CyberLearn</span>
+          <span class="brand-tag">Study Platform</span>
+        </div>
+      </div>
+      <nav id="nav" class="nav"></nav>
+      <div class="sidebar-foot">
+        <div class="streak-mini" id="streak-mini"></div>
+      </div>
+    </aside>
+
+    <div class="main-col">
+      <header id="topbar">
+        <button id="menu-btn" class="icon-btn" aria-label="Toggle menu">☰</button>
+        <h1 id="view-title" class="view-title">Dashboard</h1>
+        <div class="topbar-right">
+          <div class="search-wrap">
+            <input id="search-input" type="text" placeholder="Search lessons, terms…" autocomplete="off" />
+            <div id="search-results" class="search-results hidden"></div>
+          </div>
+          <div class="streak-badge" id="streak-badge" title="Day streak"></div>
+          <div class="sync-indicator" id="sync-indicator" title="Cloud sync"></div>
+        </div>
+      </header>
+      <main id="content" class="content"></main>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast-root" class="toast-root"></div>
+
+  <script src="data.js"></script>
+  <script src="diagrams.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

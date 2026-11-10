@@ -1,0 +1,15 @@
+{
+  "name": "cyberlearn",
+  "version": "1.0.0",
+  "description": "Interactive cybersecurity learning platform - flashcards, quizzes, and active recall.",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "build": "node build-data.js",
+    "deploy": "npx wrangler pages deploy public --project-name=cyberlearn"
+  },
+  "dependencies": {
+    "jszip": "^3.10.2",
+    "pdfjs-dist": "^6.5.438"
+  }
+}

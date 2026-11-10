@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Source course materials (large PDFs/PPTXs — kept locally, not needed to deploy)
+CSO/
+NAF/
+Firewall/
+AIC/
+
+# Logs / OS files
+*.log
+.DS_Store
+Thumbs.db
