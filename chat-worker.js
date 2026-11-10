@@ -1,17 +1,26 @@
 // CyberLearn — AI Tutor chat proxy (Cloudflare Worker)
-// Proxies chat requests from the browser to a FreeLLMAPI (or any
-// OpenAI-compatible) endpoint, keeping the base URL and API key server-side
-// (never exposed to the client).
+// Proxies chat requests from the browser to an OpenAI-compatible endpoint
+// (OpenRouter by default), keeping the API key server-side and falling back
+// across a list of free models if one is rate-limited or unavailable.
 //
 // Endpoints:
 //   POST /chat  { messages: [...], model?, temperature?, max_tokens? }
-//       -> forwards to LLM_BASE_URL + '/v1/chat/completions'
 //
-// Secrets (set via `wrangler secret put`):
-//   LLM_BASE_URL   e.g. https://your-freellmapi-host (no trailing slash)
-//   LLM_API_KEY    the FreeLLMAPI unified key (freellmapi-...)
+// Config:
+//   [vars]  LLM_BASE_URL   e.g. https://openrouter.ai/api/v1
+//   [vars]  LLM_MODEL      preferred model (optional)
+//   secret  LLM_API_KEY    provider API key (e.g. sk-or-...)
 //
-// Deployment: `npx wrangler deploy`  (see wrangler.toml)
+// Deployment: `npx wrangler deploy -c wrangler.chat.toml`
+
+const FALLBACK_MODELS = [
+  'google/gemma-4-31b-it:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free',
+  'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
+  'cohere/north-mini-code:free',
+  'dots-studio/dots-3-note-preview:free',
+  'thinkingmachines/inkling-2-small:free',
+];
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -27,15 +36,12 @@ function cors(body, status = 200, extra = {}) {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-
     if (url.pathname !== '/chat') return cors('Not found', 404);
     if (request.method === 'OPTIONS') return cors(null, 204);
     if (request.method !== 'POST') return cors('Method not allowed', 405);
 
-    const base = (env.LLM_BASE_URL || '').replace(/\/+$/, '');
-    if (!base) {
-      return cors(JSON.stringify({ error: { message: 'Server not configured (missing LLM_BASE_URL).' } }), 500, { 'Content-Type': 'application/json' });
-    }
+    // LLM_BASE_URL includes the /v1 prefix (OpenAI-style base URL); we append the route.
+    const base = (env.LLM_BASE_URL || 'https://openrouter.ai/api/v1').replace(/\/+$/, '');
 
     let body;
     try { body = await request.json(); } catch { /* handled below */ }
@@ -43,27 +49,50 @@ export default {
       return cors(JSON.stringify({ error: { message: 'Invalid request: expected { messages: [...] }.' } }), 400, { 'Content-Type': 'application/json' });
     }
 
-    const payload = {
-      model: body.model || 'auto',
-      messages: body.messages,
-      temperature: typeof body.temperature === 'number' ? body.temperature : 0.4,
-      max_tokens: body.max_tokens || 1024,
-      stream: false,
-    };
+    // Build the ordered model list: requested (if real) -> preferred -> fallbacks.
+    const models = [];
+    const requested = body.model;
+    if (requested && requested !== 'auto') models.push(requested);
+    if (env.LLM_MODEL) models.push(env.LLM_MODEL);
+    for (const m of FALLBACK_MODELS) if (!models.includes(m)) models.push(m);
 
-    const headers = { 'Content-Type': 'application/json' };
+    const headers = {
+      'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://cyberlearn-1t7.pages.dev',
+      'X-Title': 'CyberLearn AI Tutor',
+    };
     if (env.LLM_API_KEY) headers['Authorization'] = 'Bearer ' + env.LLM_API_KEY;
 
-    try {
-      const upstream = await fetch(base + '/v1/chat/completions', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-      });
-      const text = await upstream.text();
-      return cors(text, upstream.status, { 'Content-Type': 'application/json' });
-    } catch (e) {
-      return cors(JSON.stringify({ error: { message: 'Upstream error: ' + (e.message || String(e)) } }), 502, { 'Content-Type': 'application/json' });
+    let lastErr = { message: 'No model available' };
+    let lastStatus = 502;
+
+    for (const model of models) {
+      const payload = {
+        model,
+        messages: body.messages,
+        temperature: typeof body.temperature === 'number' ? body.temperature : 0.4,
+        max_tokens: body.max_tokens || 1024,
+      };
+      try {
+        const upstream = await fetch(base + '/chat/completions', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        });
+        const text = await upstream.text();
+        if (upstream.ok) {
+          return cors(text, upstream.status, { 'Content-Type': 'application/json' });
+        }
+        lastStatus = upstream.status;
+        let msg = text;
+        try { msg = (JSON.parse(text).error && JSON.parse(text).error.message) || text; } catch { /* keep raw text */ }
+        lastErr = { message: msg, model };
+      } catch (e) {
+        lastStatus = 502;
+        lastErr = { message: e.message || String(e), model };
+      }
     }
+
+    return cors(JSON.stringify({ error: lastErr }), lastStatus, { 'Content-Type': 'application/json' });
   },
 };

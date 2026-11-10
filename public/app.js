@@ -1357,8 +1357,8 @@ function closeMobileSidebar() {
 // through the chat Worker (deploy chat-worker.js) so the OmniRoute host + key
 // stay server-side.
 const AI_CHAT_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-  ? '/chat'                                   // dev: local server.js proxies to OmniRoute
-  : 'https://cyberlearn-chat.workers.dev/chat'; // prod: chat Worker proxies to OmniRoute
+  ? '/chat'                                          // dev: local server.js proxies to FreeLLMAPI
+  : 'https://cyberlearn-chat.dawn-meadow-7c7a.workers.dev/chat'; // prod: chat Worker proxies to OpenRouter
 
 const TUTOR_SYSTEM_PROMPT = `You are the CyberLearn AI study tutor, helping a student learn cybersecurity from the CyberLearn platform (Cisco CyberOps Associate, Network Analysis & Forensics, Firewall Technologies, and AI in Cybersecurity).
 

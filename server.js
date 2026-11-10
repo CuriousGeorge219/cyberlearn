@@ -10,8 +10,8 @@ const PORT = process.env.PORT || 8080;
 const ROOT = path.join(__dirname, 'public');
 
 // FreeLLMAPI endpoint for the AI tutor (local dev only — production uses chat-worker.js).
-// Set LLM_BASE_URL / LLM_API_KEY to point at any OpenAI-compatible gateway.
-const LLM_BASE_URL = process.env.LLM_BASE_URL || 'http://127.0.0.1:3001';
+// LLM_BASE_URL includes the /v1 prefix (OpenAI-style base URL); we append /chat/completions.
+const LLM_BASE_URL = process.env.LLM_BASE_URL || 'http://127.0.0.1:3001/v1';
 const LLM_API_KEY = process.env.LLM_API_KEY || 'freellmapi-f1318046eadb8533aace0869e735a2a72fdc2e89b7652fb8';
 
 const MIME = {
@@ -35,7 +35,7 @@ const server = http.createServer((req, res) => {
       try {
         const headers = { 'Content-Type': 'application/json' };
         if (LLM_API_KEY) headers['Authorization'] = 'Bearer ' + LLM_API_KEY;
-        const upstream = await fetch(LLM_BASE_URL + '/v1/chat/completions', {
+        const upstream = await fetch(LLM_BASE_URL + '/chat/completions', {
           method: 'POST',
           headers,
           body,
