@@ -556,6 +556,11 @@ b.term { color: var(--accent-2); font-weight: 700; }
 }
 .tutor-close:hover { color: #fff; }
 
+.tutor-usage { padding: 8px 16px 10px; border-bottom: 1px solid var(--border-soft); }
+.tutor-usage-bar { height: 6px; background: var(--panel-3); border-radius: 4px; overflow: hidden; }
+.tutor-usage-bar > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 4px; transition: width 0.4s; }
+.tutor-usage-text { font-size: 11px; color: var(--text-faint); margin-top: 5px; }
+
 .tutor-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .tutor-msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
 .tutor-msg.user { align-self: flex-end; background: var(--panel-3); border: 1px solid var(--border); border-bottom-right-radius: 4px; }

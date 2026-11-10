@@ -1372,6 +1372,30 @@ Guidelines:
 let tutorChat = [];   // message history: [{role, content}]
 let tutorBusy = false;
 
+// Daily token budget shown in the tutor's usage bar (tokens used today vs this).
+const TUTOR_TOKEN_BUDGET = 100000;
+
+function tutorTokenState() {
+  const st = Store.get('cl.tutorTokens', { date: todayStr(), tokens: 0 });
+  if (st.date !== todayStr()) st = { date: todayStr(), tokens: 0 };
+  return st;
+}
+function addTutorTokens(n) {
+  const st = tutorTokenState();
+  st.tokens += n;
+  Store.set('cl.tutorTokens', st);
+  updateTutorUsage();
+}
+function updateTutorUsage() {
+  const fill = el('tutor-usage-fill');
+  const text = el('tutor-usage-text');
+  if (!fill || !text) return;
+  const st = tutorTokenState();
+  const pct = Math.min(100, Math.round(st.tokens / TUTOR_TOKEN_BUDGET * 100));
+  fill.style.width = pct + '%';
+  text.textContent = st.tokens.toLocaleString() + ' / ' + TUTOR_TOKEN_BUDGET.toLocaleString() + ' tokens today (' + pct + '%)';
+}
+
 function buildTutorContext() {
   const { view, arg } = parseHash();
   let ctx = '';
@@ -1469,6 +1493,8 @@ function sendTutor() {
       typing.className = 'tutor-msg assistant';
       typing.innerHTML = mdLite(reply);
       tutorChat.push({ role: 'assistant', content: reply });
+      const used = data && data.usage && data.usage.total_tokens;
+      if (used) addTutorTokens(used);
     })
     .catch(e => {
       typing.className = 'tutor-msg assistant err';
@@ -1484,6 +1510,7 @@ function setupTutor() {
   el('tutor-fab').onclick = () => el('tutor-panel').classList.toggle('hidden');
   el('tutor-close').onclick = () => el('tutor-panel').classList.add('hidden');
   el('tutor-send').onclick = sendTutor;
+  updateTutorUsage();
   const input = el('tutor-input');
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTutor(); }
