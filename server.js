@@ -9,10 +9,11 @@ const path = require('path');
 const PORT = process.env.PORT || 8080;
 const ROOT = path.join(__dirname, 'public');
 
-// FreeLLMAPI endpoint for the AI tutor (local dev only — production uses chat-worker.js).
+// AI tutor proxy for local dev only — production uses the chat-worker.js Cloudflare Worker.
 // LLM_BASE_URL includes the /v1 prefix (OpenAI-style base URL); we append /chat/completions.
-const LLM_BASE_URL = process.env.LLM_BASE_URL || 'http://127.0.0.1:3001/v1';
-const LLM_API_KEY = process.env.LLM_API_KEY || 'freellmapi-f1318046eadb8533aace0869e735a2a72fdc2e89b7652fb8';
+// Set LLM_API_KEY (e.g. your OpenRouter key) when running locally via `npm start`.
+const LLM_BASE_URL = process.env.LLM_BASE_URL || 'https://openrouter.ai/api/v1';
+const LLM_API_KEY = process.env.LLM_API_KEY || '';
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
