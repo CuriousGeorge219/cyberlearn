@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#140a0c" />
   <title>CyberLearn — Interactive Cybersecurity Study Platform</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -29,12 +30,12 @@
         <button id="menu-btn" class="icon-btn" aria-label="Toggle menu">☰</button>
         <h1 id="view-title" class="view-title">Dashboard</h1>
         <div class="topbar-right">
-          <div class="search-wrap">
-            <input id="search-input" type="text" placeholder="Search lessons, terms…" autocomplete="off" />
-            <div id="search-results" class="search-results hidden"></div>
-          </div>
           <div class="streak-badge" id="streak-badge" title="Day streak"></div>
           <div class="sync-indicator" id="sync-indicator" title="Cloud sync"></div>
+        </div>
+        <div class="search-wrap">
+          <input id="search-input" type="text" placeholder="Search lessons, terms…" autocomplete="off" />
+          <div id="search-results" class="search-results hidden"></div>
         </div>
       </header>
       <main id="content" class="content"></main>

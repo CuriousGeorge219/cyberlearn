@@ -14,7 +14,7 @@ An interactive, gamified study platform for cybersecurity course content, built 
 - **Study / Read mode** — clean lesson reader with key-terms highlighted inline, a **"Key takeaways"** summary, and a **lesson roadmap**.
 - **Active recall mode** — bullet points blur until you click to reveal, forcing recall before seeing the answer.
 - **Flashcards + spaced repetition** — a full SM-2 scheduler (Again / Hard / Good / Easy) that spaces reviews over days. Keyboard: `Space` flip, `1–4` grade.
-- **Quizzes** — multiple choice, true/false, and fill-in-the-blank with instant feedback and explanations.
+- **Quizzes** — multiple choice, true/false, and fill-in-the-blank with instant feedback, explanations, and selectable difficulty (Easy / Medium / Hard / Mixed).
 - **🧩 Concept diagrams** — 17 hand-built visual diagrams (OSI model, TCP handshake, CIA triad, PKI, encryption, NAT, SOC flow, forensics, and more), linked automatically from the lessons they relate to.
 - **🎮 Gamification** — earn XP for every lesson, card, and quiz; rank up from *Script Kiddie* to *CISO*; unlock 16 achievements; build a daily streak.
 - **☁️ Cross-device sync** — optionally sync all progress between devices by entering a **sync key** (the backend is pre-configured; no setup required).

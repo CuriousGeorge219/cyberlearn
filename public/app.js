@@ -6,6 +6,14 @@
 
 const DATA = window.COURSE_DATA;
 
+/* ----------------------------- Theme ------------------------------- */
+// Red theme: recolor any leftover blue module accent to match.
+(function applyModuleTheme() {
+  if (!DATA || !DATA.modules) return;
+  const colors = { cso: '#f43f5e' };
+  for (const m of DATA.modules) if (colors[m.id]) m.color = colors[m.id];
+})();
+
 /* ----------------------------- Utilities ---------------------------- */
 function esc(s) {
   return String(s == null ? '' : s)
@@ -755,60 +763,94 @@ function gradeCurrent(q) {
 /* ----------------------------- Quiz -------------------------------- */
 let quiz = null;
 
-function renderQuiz(scope) {
+const QUIZ_DIFFS = [
+  { id: 'mixed',  label: 'Mixed',   desc: 'A balanced mix of medium & hard questions — skips the trivial true/false confirmations.' },
+  { id: 'easy',   label: 'Easy',    desc: 'Quick true/false confirmation questions.' },
+  { id: 'medium', label: 'Medium',  desc: 'Multiple-choice plus spot-the-error true/false.' },
+  { id: 'hard',   label: 'Hard',    desc: 'Fill-in-the-blank recall questions.' },
+];
+
+function quizDifficultyPref() { return Store.get('cl.quizDiff', 'mixed'); }
+function setQuizDifficultyPref(d) { Store.set('cl.quizDiff', d); }
+
+function questionDifficulty(q) {
+  if (q.type === 'cloze') return 'hard';
+  if (q.type === 'tf') return q.answer === true ? 'easy' : 'medium';
+  return 'medium'; // mcq
+}
+function filterQuizPool(pool, diff) {
+  if (diff === 'mixed') return pool.filter(q => questionDifficulty(q) !== 'easy');
+  return pool.filter(q => questionDifficulty(q) === diff);
+}
+
+function quizScope(scope) {
   scope = scope || '';
-  const isAll = !scope;
   const isModule = scope.startsWith('m:');
   const isLesson = scope.startsWith('l:');
+  let pool = [], title = 'All modules';
+  if (isModule) { const mm = findModule(scope.slice(2)); if (mm) { pool = mm.lessons.flatMap(l => l.quiz); title = mm.name; } }
+  else if (isLesson) { const ll = findLesson(scope.slice(2)); if (ll) { pool = ll.lesson.quiz; title = ll.lesson.title; } }
+  else { pool = DATA.modules.flatMap(m => m.lessons.flatMap(l => l.quiz)); }
+  return { scope, isModule, isLesson, pool, title };
+}
+
+function renderQuiz(scope) {
+  const qs = quizScope(scope);
+  const diff = quizDifficultyPref();
+  const filtered = filterQuizPool(qs.pool, diff);
+  const diffMeta = QUIZ_DIFFS.find(d => d.id === diff);
 
   let html = `<div class="lesson-hero"><div>
-    <div class="crumb">Self-test</div><h2>Quiz</h2></div></div>`;
+    <div class="crumb">Self-test</div><h2>Quiz</h2></div></div>
+    <div class="quiz-setup">`;
 
-  // Source selection
-  html += '<div class="quiz-setup"><div class="card mb"><h3>1 · Choose scope</h3>';
-  html += `<button class="btn ${isAll ? 'primary' : ''} mb" data-nav="quiz" data-arg="">All modules</button> `;
-  for (const m of DATA.modules) {
-    html += `<button class="btn ${scope === 'm:' + m.id ? 'primary' : ''} mb" data-nav="quiz" data-arg="m:${m.id}">${m.icon} ${m.short}</button> `;
-  }
-  html += '</div>';
+  // 1 · scope
+  html += `<div class="card mb"><h3 class="setup-h">1 · Choose scope</h3>
+    <div class="quiz-chips">
+      <button class="btn ${!qs.scope ? 'primary' : ''}" data-nav="quiz" data-arg="">All modules</button>
+      ${DATA.modules.map(m => `<button class="btn ${qs.scope === 'm:' + m.id ? 'primary' : ''}" data-nav="quiz" data-arg="m:${m.id}">${m.icon} ${m.short}</button>`).join('')}
+    </div>
+    <div class="muted scope-note">Scope: <b>${esc(qs.title)}</b> · ${qs.pool.length} questions total</div>
+  </div>`;
 
-  if (scope) {
-    let pool = [];
-    let title = '';
-    if (isModule) { const mm = findModule(scope.slice(2)); pool = mm.lessons.flatMap(l => l.quiz); title = mm.name; }
-    else if (isLesson) { const ll = findLesson(scope.slice(2)).lesson; pool = ll.quiz; title = ll.title; }
-    html += `<div class="muted" style="margin:6px 0 12px">Scope: <b>${esc(title || scope)}</b></div>`;
-    if (!pool.length) {
-      html += `<div class="card empty-state">No questions available for this selection.</div>`;
-    } else {
-      html += `<div class="card mb"><h3>2 · How many questions?</h3>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">`;
-      const opts = [5, 10, 20, 30];
-      for (const n of opts) {
-        if (pool.length >= n) html += `<button class="btn" data-start-quiz="${n}">${n} questions</button>`;
-      }
-      html += `<button class="btn" data-start-quiz="${pool.length}">All (${pool.length})</button>`;
-      html += '</div></div>';
-    }
+  // 2 · difficulty
+  html += `<div class="card mb"><h3 class="setup-h">2 · Choose difficulty</h3>
+    <div class="quiz-chips" id="diff-picker">
+      ${QUIZ_DIFFS.map(d => `<button class="diff-chip ${diff === d.id ? 'active' : ''}" data-diff="${d.id}">${d.label}</button>`).join('')}
+    </div>
+    <div class="muted diff-note">${esc(diffMeta.desc)}</div>
+  </div>`;
+
+  // 3 · count
+  if (filtered.length) {
+    const opts = [5, 10, 20, 30];
+    html += `<div class="card mb"><h3 class="setup-h">3 · How many questions?</h3>
+      <div class="quiz-chips">
+        ${opts.filter(c => filtered.length >= c).map(c => `<button class="btn" data-start-quiz="${c}">${c}</button>`).join('')}
+        <button class="btn primary" data-start-quiz="${filtered.length}">All (${filtered.length})</button>
+      </div>
+    </div>`;
+  } else {
+    html += `<div class="card empty-state">No <b>${esc(diffMeta.label)}</b> questions in this scope — try another difficulty.</div>`;
   }
+
   html += '</div>';
   el('content').innerHTML = html;
 
   el('content').querySelectorAll('[data-start-quiz]').forEach(b => {
-    b.onclick = () => startQuiz(scope, parseInt(b.dataset.startQuiz));
+    b.onclick = () => startQuiz(qs.scope, parseInt(b.dataset.startQuiz), diff);
+  });
+  const picker = el('diff-picker');
+  if (picker) picker.querySelectorAll('.diff-chip').forEach(b => {
+    b.onclick = () => { setQuizDifficultyPref(b.dataset.diff); renderQuiz(qs.scope); };
   });
 }
 
-function startQuiz(scope, n) {
-  const isModule = scope.startsWith('m:');
-  const isLesson = scope.startsWith('l:');
-  let pool = [];
-  let label = 'All modules';
-  if (isModule) { const mm = findModule(scope.slice(2)); pool = mm.lessons.flatMap(l => l.quiz); label = mm.name; }
-  else if (isLesson) { const ll = findLesson(scope.slice(2)).lesson; pool = ll.quiz; label = ll.title; }
-  else { pool = DATA.modules.flatMap(m => m.lessons.flatMap(l => l.quiz)); }
-  pool = shuffle(pool).slice(0, n);
-  quiz = { scope, label, questions: pool, i: 0, correct: 0, answers: [] };
+function startQuiz(scope, n, diff) {
+  const qs = quizScope(scope);
+  const pool = shuffle(filterQuizPool(qs.pool, diff)).slice(0, n);
+  const diffLabel = (QUIZ_DIFFS.find(d => d.id === diff) || {}).label || 'Mixed';
+  quiz = { scope, label: qs.title, difficulty: diffLabel, questions: pool, i: 0, correct: 0, answers: [] };
   renderQuizRun();
 }
 
@@ -817,17 +859,28 @@ function renderQuizRun() {
   if (quiz.i >= quiz.questions.length) return renderQuizResult();
   const q = quiz.questions[quiz.i];
   const idx = quiz.i;
+  const typeLabel = q.type === 'mcq' ? 'Multiple choice' : q.type === 'tf' ? 'True / False' : 'Fill in the blank';
+  const letters = 'ABCDEFGHIJ';
 
   let html = `<div class="q-card">
-    <div class="crumb mb">${esc(quiz.label)}</div>
-    <div class="q-progress"><span style="width:${Math.round(idx / quiz.questions.length * 100)}%"></span></div>
-    <div class="card">
-      <div class="muted" style="font-size:12.5px">Question ${idx + 1} of ${quiz.questions.length} · ${q.type === 'mcq' ? 'Multiple choice' : q.type === 'tf' ? 'True / False' : 'Fill in the blank'}</div>
-      <h3 style="margin:10px 0 4px">${esc(q.q)}</h3>
-      ${q.stem ? `<div class="q-stem">${blankHtml(esc(q.stem))}</div>` : ''}
-      <div id="q-answers"></div>
-      <div id="q-feedback"></div>
+    <div class="q-meta">
+      <span class="crumb">${esc(quiz.label)}</span>
+      <span class="q-badge">${esc(quiz.difficulty)}</span>
     </div>
+    <div class="q-progress"><span style="width:${Math.round((idx + 1) / quiz.questions.length * 100)}%"></span></div>
+
+    <div class="q-question card">
+      <div class="q-kicker">${esc(typeLabel)} · Question ${idx + 1} of ${quiz.questions.length}</div>
+      <div class="q-prompt">${esc(q.q)}</div>
+      ${q.stem ? `<div class="q-stem">${blankHtml(esc(q.stem))}</div>` : ''}
+    </div>
+
+    <div class="q-answers">
+      <div class="q-answers-label">Choose your answer</div>
+      <div id="q-answers"></div>
+    </div>
+
+    <div id="q-feedback"></div>
   </div>`;
   el('content').innerHTML = html;
 
@@ -844,32 +897,38 @@ function renderQuizRun() {
   }
 
   if (q.type === 'tf') {
-    ansBox.innerHTML = `<button class="q-option" data-tf="true">True</button><button class="q-option" data-tf="false">False</button>`;
+    const tfOpts = [{ l: 'A', v: true, label: 'True' }, { l: 'B', v: false, label: 'False' }];
+    ansBox.innerHTML = tfOpts.map(o => `<button class="q-option" data-tf="${o.v}"><span class="q-letter">${o.l}</span><span>${o.label}</span></button>`).join('');
     ansBox.querySelectorAll('[data-tf]').forEach(b => b.onclick = () => {
       const val = b.dataset.tf === 'true';
-      respond(val === q.answer, b.dataset.tf);
+      respond(val === q.answer, val ? 'True' : 'False');
+      ansBox.querySelectorAll('[data-tf]').forEach(x => {
+        x.disabled = true;
+        const xv = x.dataset.tf === 'true';
+        if (xv === q.answer) x.classList.add('correct');
+        else if (xv === val) x.classList.add('wrong');
+      });
     });
   } else if (q.type === 'mcq' || (q.type === 'cloze' && q.options)) {
-    const options = q.type === 'mcq' ? q.options : q.options;
+    const options = q.options;
     const correctIndex = q.type === 'mcq' ? q.answer : q.options.indexOf(q.answer);
     options.forEach((opt, i) => {
       const btn = document.createElement('button');
       btn.className = 'q-option';
-      btn.textContent = opt;
+      btn.innerHTML = `<span class="q-letter">${letters[i] || (i + 1)}</span><span>${esc(opt)}</span>`;
       btn.onclick = () => {
         respond(i === correctIndex, opt);
-        highlightOptions();
+        ansBox.querySelectorAll('.q-option').forEach((b, k) => {
+          b.disabled = true;
+          if (k === correctIndex) b.classList.add('correct');
+          else if (k === i) b.classList.add('wrong');
+        });
       };
       ansBox.appendChild(btn);
     });
-    function highlightOptions() {
-      const opts = ansBox.querySelectorAll('.q-option');
-      const ci = correctIndex;
-      opts.forEach((b, i) => { if (i === ci) b.classList.add('correct'); b.disabled = true; });
-    }
   } else if (q.type === 'cloze') {
     ansBox.innerHTML = `<input class="q-cloze-input" id="cloze-in" placeholder="Type your answer…" autocomplete="off">
-      <button class="btn primary mt" id="cloze-submit" style="display:block">Check</button>`;
+      <button class="btn primary mt" id="cloze-submit">Check</button>`;
     const input = el('cloze-in');
     const submit = () => {
       const val = input.value.trim();
