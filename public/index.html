@@ -46,6 +46,20 @@
   <div id="modal-root"></div>
   <div id="toast-root" class="toast-root"></div>
 
+  <!-- AI Tutor -->
+  <button id="tutor-fab" class="tutor-fab" aria-label="Open AI tutor" title="AI tutor">🤖</button>
+  <div id="tutor-panel" class="tutor-panel hidden">
+    <div class="tutor-head">
+      <div class="tutor-title"><span class="tutor-emoji">🤖</span> AI Tutor</div>
+      <button id="tutor-close" class="tutor-close" aria-label="Close">✕</button>
+    </div>
+    <div id="tutor-messages" class="tutor-messages"></div>
+    <div class="tutor-input-row">
+      <textarea id="tutor-input" class="tutor-input" placeholder="Ask about your studies…" rows="1"></textarea>
+      <button id="tutor-send" class="tutor-send" aria-label="Send">➤</button>
+    </div>
+  </div>
+
   <script src="data.js"></script>
   <script src="diagrams.js"></script>
   <script src="app.js"></script>

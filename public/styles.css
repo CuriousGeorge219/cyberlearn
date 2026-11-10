@@ -519,3 +519,67 @@ b.term { color: var(--accent-2); font-weight: 700; }
   .hero-icon { font-size: 38px; }
   .hero-stats { gap: 12px; }
 }
+
+/* =====================================================================
+   AI Tutor chat
+   ===================================================================== */
+.tutor-fab {
+  position: fixed; right: 22px; bottom: 22px; z-index: 150;
+  width: 58px; height: 58px; border-radius: 50%;
+  border: none; cursor: pointer; font-size: 26px;
+  background: linear-gradient(135deg, #be123c, #f43f5e);
+  box-shadow: 0 8px 24px rgba(244, 63, 94, 0.45);
+  display: grid; place-items: center;
+  transition: transform 0.15s, filter 0.15s;
+}
+.tutor-fab:hover { transform: translateY(-3px); filter: brightness(1.08); }
+
+.tutor-panel {
+  position: fixed; right: 22px; bottom: 92px; z-index: 160;
+  width: 380px; max-width: calc(100vw - 24px); height: 560px; max-height: calc(100vh - 120px);
+  background: var(--panel); border: 1px solid var(--border); border-radius: 18px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden;
+  animation: tutor-pop 0.18s ease;
+}
+@keyframes tutor-pop { from { opacity: 0; transform: translateY(12px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+.tutor-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px; border-bottom: 1px solid var(--border-soft);
+  background: linear-gradient(135deg, rgba(244,63,94,0.12), transparent);
+}
+.tutor-title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.tutor-emoji { font-size: 18px; }
+.tutor-close {
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--text-dim);
+  width: 30px; height: 30px; border-radius: 8px; cursor: pointer; font-size: 13px;
+}
+.tutor-close:hover { color: #fff; }
+
+.tutor-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.tutor-msg { max-width: 88%; padding: 10px 14px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+.tutor-msg.user { align-self: flex-end; background: var(--panel-3); border: 1px solid var(--border); border-bottom-right-radius: 4px; }
+.tutor-msg.assistant { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+.tutor-msg.assistant.err { border-color: var(--red); background: rgba(239,68,68,0.1); }
+.tutor-msg b, .tutor-msg strong { color: var(--accent-2); }
+.tutor-msg code { background: var(--panel-3); padding: 1px 6px; border-radius: 5px; font-family: var(--mono); font-size: 12px; }
+.tutor-msg pre { background: var(--bg-2); padding: 10px; border-radius: 8px; overflow-x: auto; }
+.tutor-msg .typing { color: var(--text-faint); }
+
+.tutor-input-row { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border-soft); }
+.tutor-input {
+  flex: 1; resize: none; background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+  border-radius: 10px; padding: 10px 12px; font-size: 13.5px; font-family: var(--font); outline: none;
+  max-height: 120px; line-height: 1.4;
+}
+.tutor-input:focus { border-color: var(--accent); }
+.tutor-send {
+  flex: none; width: 42px; height: 42px; border-radius: 10px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #be123c, #f43f5e); color: #fff; font-size: 17px; font-weight: 700;
+}
+.tutor-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .tutor-fab { right: 14px; bottom: 14px; width: 52px; height: 52px; font-size: 23px; }
+  .tutor-panel { right: 10px; bottom: 76px; left: 10px; width: auto; height: calc(100vh - 96px); max-height: none; }
+}

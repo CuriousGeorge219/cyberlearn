@@ -1352,11 +1352,154 @@ function closeMobileSidebar() {
   el('sidebar-backdrop').classList.remove('show');
 }
 
+/* ----------------------------- AI Tutor ---------------------------- */
+// OmniRoute chat endpoint. Local dev hits OmniRoute directly; production goes
+// through the chat Worker (deploy chat-worker.js) so the OmniRoute host + key
+// stay server-side.
+const AI_CHAT_URL = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? '/chat'                                   // dev: local server.js proxies to OmniRoute
+  : 'https://cyberlearn-chat.workers.dev/chat'; // prod: chat Worker proxies to OmniRoute
+
+const TUTOR_SYSTEM_PROMPT = `You are the CyberLearn AI study tutor, helping a student learn cybersecurity from the CyberLearn platform (Cisco CyberOps Associate, Network Analysis & Forensics, Firewall Technologies, and AI in Cybersecurity).
+
+Guidelines:
+- Be accurate, concise and friendly. Use plain language and explain acronyms.
+- Prefer to answer from the lesson context and flashcards provided below when they are relevant.
+- If the context does not cover the question, answer from general cybersecurity knowledge.
+- Use short paragraphs and, where helpful, a bullet list or a concrete example.
+- Occasionally suggest a way the student can test themselves (e.g. a quiz question).`;
+
+let tutorChat = [];   // message history: [{role, content}]
+let tutorBusy = false;
+
+function buildTutorContext() {
+  const { view, arg } = parseHash();
+  let ctx = '';
+  if (view === 'lesson') {
+    const f = findLesson(arg);
+    if (f) {
+      ctx += 'The student is currently viewing this lesson:\n';
+      ctx += 'Module: ' + f.module.name + '\n';
+      ctx += 'Lesson: ' + f.lesson.title + '\n';
+      if ((f.lesson.takeaways || []).length) {
+        ctx += '\nKey takeaways:\n';
+        for (const t of f.lesson.takeaways.slice(0, 20)) ctx += '- ' + t.term + ': ' + t.def + '\n';
+      }
+      const parts = [];
+      for (const b of f.lesson.blocks) {
+        if (b.type === 'heading') parts.push('## ' + b.text);
+        else if (b.type === 'p') parts.push(b.text);
+        else if (b.type === 'bullets') parts.push(b.items.join(' · '));
+      }
+      if (parts.length) ctx += '\nLesson content:\n' + parts.join('\n').slice(0, 4000) + '\n';
+    }
+  }
+  return ctx;
+}
+
+function searchCourse(query) {
+  const words = (query || '').toLowerCase().split(/\W+/).filter(w => w.length > 2);
+  if (!words.length) return '';
+  const hits = [];
+  for (const { m, l, c } of allCards()) {
+    const hay = (c.front + ' ' + c.back).toLowerCase();
+    let score = 0;
+    for (const w of words) if (hay.includes(w)) score++;
+    if (score) hits.push({ score, m, c });
+  }
+  hits.sort((a, b) => b.score - a.score);
+  const top = hits.slice(0, 8);
+  if (!top.length) return '';
+  return 'Relevant flashcards from the course (for reference):\n' +
+    top.map(h => '- [' + h.m.short + '] ' + h.c.front + ' — ' + h.c.back).join('\n');
+}
+
+function buildTutorMessages(userText) {
+  let sys = TUTOR_SYSTEM_PROMPT;
+  const ctx = buildTutorContext();
+  if (ctx) sys += '\n\n' + ctx;
+  const ref = searchCourse(userText);
+  if (ref) sys += '\n\n' + ref;
+  return [{ role: 'system', content: sys }, ...tutorChat, { role: 'user', content: userText }];
+}
+
+function mdLite(text) {
+  let t = esc(String(text || ''));
+  t = t.replace(/```([\s\S]*?)```/g, '<pre>$1</pre>');
+  t = t.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+  t = t.replace(/\*\*([^*\n]+)\*\*/g, '<b>$1</b>');
+  t = t.replace(/(^|\n)- (.+)/g, '$1• $2');
+  return t;
+}
+
+function appendTutorMessage(role, html) {
+  const box = el('tutor-messages');
+  const div = document.createElement('div');
+  div.className = 'tutor-msg ' + role;
+  div.innerHTML = html;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  return div;
+}
+
+function sendTutor() {
+  if (tutorBusy) return;
+  const input = el('tutor-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = 'auto';
+  appendTutorMessage('user', esc(text));
+  tutorChat.push({ role: 'user', content: text });
+
+  const typing = appendTutorMessage('assistant', '<span class="typing">Thinking…</span>');
+  tutorBusy = true;
+  el('tutor-send').disabled = true;
+
+  fetch(AI_CHAT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model: 'auto', messages: buildTutorMessages(text) }),
+  })
+    .then(r => r.json().catch(() => ({})))
+    .then(data => {
+      const reply = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
+        || (data.error && (data.error.message || JSON.stringify(data.error)))
+        || 'Sorry, I could not get a response.';
+      typing.className = 'tutor-msg assistant';
+      typing.innerHTML = mdLite(reply);
+      tutorChat.push({ role: 'assistant', content: reply });
+    })
+    .catch(e => {
+      typing.className = 'tutor-msg assistant err';
+      typing.innerHTML = '⚠️ ' + esc('Could not reach the AI tutor — ' + e.message);
+    })
+    .finally(() => {
+      tutorBusy = false;
+      el('tutor-send').disabled = false;
+    });
+}
+
+function setupTutor() {
+  el('tutor-fab').onclick = () => el('tutor-panel').classList.toggle('hidden');
+  el('tutor-close').onclick = () => el('tutor-panel').classList.add('hidden');
+  el('tutor-send').onclick = sendTutor;
+  const input = el('tutor-input');
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTutor(); }
+  });
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
+  });
+}
+
 /* ----------------------------- Init -------------------------------- */
 function init() {
   if (!DATA || !DATA.modules) { el('content').innerHTML = '<div class="card">Could not load course data. Run <code>npm run build</code> first.</div>'; return; }
   setupGlobalEvents();
   setupSearch();
+  setupTutor();
   renderSidebar();
   updateSyncIndicator();
   if (Store.get('cl.sidebarCollapsed', false)) el('app').classList.add('sidebar-collapsed');
