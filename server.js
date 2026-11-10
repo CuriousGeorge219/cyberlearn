@@ -28,7 +28,7 @@ const server = http.createServer((req, res) => {
   let urlPath = decodeURIComponent((req.url || '/').split('?')[0]);
   if (urlPath === '/') urlPath = '/index.html';
 
-  // AI tutor proxy: forward /chat to FreeLLMAPI (adds CORS for safety).
+  // AI tutor proxy: forward /chat to the LLM provider (adds CORS for safety).
   if (urlPath === '/chat' && req.method === 'POST') {
     let body = '';
     req.on('data', c => { body += c; });
