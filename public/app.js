@@ -315,6 +315,7 @@ function navigate(view, arg) {
 
 function route() {
   const { view, arg } = parseHash();
+  closeMobileSidebar();
   renderSidebar();
   updateTopbar(view, arg);
   const fn = routes[view] || renderDashboard;
@@ -1255,15 +1256,26 @@ function setupGlobalEvents() {
   });
 
   el('menu-btn').onclick = () => {
-    if (window.innerWidth <= 860) el('sidebar').classList.toggle('open');
+    if (window.innerWidth <= 1024) toggleMobileSidebar();
     else toggleSidebarRail();
   };
+
+  el('sidebar-backdrop').onclick = () => closeMobileSidebar();
 }
 
 function toggleSidebarRail() {
   const app = el('app');
   const collapsed = app.classList.toggle('sidebar-collapsed');
   Store.set('cl.sidebarCollapsed', collapsed);
+}
+
+function toggleMobileSidebar() {
+  const open = el('sidebar').classList.toggle('open');
+  el('sidebar-backdrop').classList.toggle('show', open);
+}
+function closeMobileSidebar() {
+  el('sidebar').classList.remove('open');
+  el('sidebar-backdrop').classList.remove('show');
 }
 
 /* ----------------------------- Init -------------------------------- */
