@@ -100,6 +100,17 @@ const CURATED_GENERIC_LAB_QUESTIONS = [
   { type: 'mcq', q: 'Which command shows IP configuration on Linux?', options: ['ipconfig', 'ifconfig', 'show ip', 'winipcfg'], answer: 1, explanation: '`ifconfig` (or `ip addr`) shows Linux IP settings.' },
   { type: 'tf', q: 'Traffic from a higher security level to a lower security level is generally allowed by default on an ASA.', answer: true, explanation: 'ASA permits higher→lower by default unless an ACL blocks it.' },
   { type: 'tf', q: 'Traffic from a lower security level to a higher security level (e.g. outside→inside) is allowed by default.', answer: false, explanation: 'Lower→higher is denied by default; it needs an ACL.' },
+  { type: 'mcq', q: 'What is the purpose of a default gateway on a host?', options: ['To route traffic to other networks', 'To assign an IP address', 'To filter packets', 'To resolve DNS'], answer: 0, explanation: 'A default gateway is the router a host sends off-network traffic to.' },
+  { type: 'mcq', q: 'What subnet mask corresponds to a /24 network?', options: ['255.255.255.0', '255.255.0.0', '255.0.0.0', '255.255.255.255'], answer: 0, explanation: '/24 = 255.255.255.0 (254 usable hosts).' },
+  { type: 'mcq', q: 'How many usable host addresses are in a /24 network?', options: ['254', '256', '128', '512'], answer: 0, explanation: 'A /24 has 256 addresses, minus network and broadcast = 254 hosts.' },
+  { type: 'mcq', q: 'Which ASA interface is typically used to access the ASDM graphical interface?', options: ['The management (MGMT) interface', 'The outside interface', 'The console port', 'The DMZ'], answer: 0, explanation: 'ASDM is reached via the management interface (gi 1/2).' },
+  { type: 'mcq', q: 'Which of these is a valid private IPv4 address?', options: ['10.10.10.10', '8.8.8.8', '209.165.200.225', '172.32.0.1'], answer: 0, explanation: '10.0.0.0/8 is private (RFC 1918).' },
+  { type: 'mcq', q: 'Which ASA access method is NOT encrypted by default?', options: ['Telnet', 'SSH', 'ASDM over HTTPS', 'Console'], answer: 0, explanation: 'Telnet sends traffic in cleartext; SSH/HTTPS are encrypted.' },
+  { type: 'mcq', q: 'What does the `show running-config` command display?', options: ['The active configuration', 'The saved startup config', 'The routing table', 'The interface statistics'], answer: 0, explanation: '`show running-config` shows the live configuration.' },
+  { type: 'mcq', q: 'What does DHCP allow a host to do?', options: ['Obtain an IP address automatically', 'Encrypt traffic', 'Resolve names to IPs', 'Block attacks'], answer: 0, explanation: 'DHCP automatically assigns IP settings to hosts.' },
+  { type: 'mcq', q: 'What is the broadcast address of the network 192.168.1.0/24?', options: ['192.168.1.255', '192.168.1.0', '192.168.1.1', '255.255.255.0'], answer: 0, explanation: 'The last address in the subnet (all host bits = 1) is the broadcast.' },
+  { type: 'mcq', q: 'Which command on a Windows host shows the routing table?', options: ['route print', 'netstat', 'ipconfig', 'tracert'], answer: 0, explanation: '`route print` displays the host routing table.' },
+  { type: 'mcq', q: 'Which command on Windows traces the path packets take to a destination?', options: ['tracert', 'ping', 'ipconfig', 'nslookup'], answer: 0, explanation: '`tracert` shows each hop to the destination.' },
 ];
 
 // General diagram / networking questions added across the firewall + network content.

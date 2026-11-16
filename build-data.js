@@ -445,6 +445,7 @@ function extractKnowledge(blocks) {
 
   const quiz = [];
   const termPool = terms.map(t => t.term);
+  const defPool = [...new Set(terms.map(t => t.def).filter(d => d && d.length >= 3 && d.length <= 90))];
   function pickDistractors(correct, pool, count = 3) {
     const opts = new Set([correct]);
     const shuffled = pool.filter(p => !opts.has(p)).sort(() => Math.random() - 0.5);
@@ -453,8 +454,10 @@ function extractKnowledge(blocks) {
   }
 
   for (const t of terms) {
-    if (quiz.length >= 60) break;
+    if (quiz.length >= 150) break;
     const tTerm = t.term, tDef = t.def;
+
+    // 1 · definition → term (existing)
     if (termPool.length >= 4) {
       const opts = pickDistractors(tTerm, termPool, 3);
       quiz.push({
@@ -466,6 +469,20 @@ function extractKnowledge(blocks) {
         explanation: `${tTerm} — ${tDef}`,
       });
     }
+
+    // 2 · term → definition (concise, short definitions only)
+    if (defPool.length >= 4 && tDef.length >= 3 && tDef.length <= 90) {
+      const opts = pickDistractors(tDef, defPool, 3);
+      quiz.push({
+        type: 'mcq',
+        q: `What does “${tTerm}” mean?`,
+        options: opts,
+        answer: opts.indexOf(tDef),
+        explanation: `${tTerm} — ${tDef}`,
+      });
+    }
+
+    // 3 · true / false
     if (termPool.length >= 2) {
       const other = termPool.filter(x => x.toLowerCase() !== tTerm.toLowerCase());
       if (other.length) {
@@ -482,6 +499,8 @@ function extractKnowledge(blocks) {
         }
       }
     }
+
+    // 4 · fill in the blank
     const clozeDef = tDef.replace(new RegExp(`\\b${tTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i'), '_____');
     if (clozeDef !== tDef && clozeDef.includes('_____')) {
       quiz.push({
