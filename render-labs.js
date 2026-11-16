@@ -31,12 +31,16 @@ const OUT_DIR = path.join(__dirname, 'public', 'labs');
     const pages = [];
     for (let p = 1; p <= doc.numPages; p++) {
       const page = await doc.getPage(p);
-      const vp = page.getViewport({ scale: 1.6 });
+      // High DPI for crisp text/diagrams (vector PDFs scale cleanly).
+      const vp = page.getViewport({ scale: 3.0 });
       const canvas = createCanvas(Math.floor(vp.width), Math.floor(vp.height));
       const ctx = canvas.getContext('2d');
+      // White background so the sheet looks like paper.
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, vp.width, vp.height);
       await page.render({ canvasContext: ctx, viewport: vp }).promise;
-      const buf = canvas.toBuffer('image/jpeg', 0.8);
-      const name = 'page' + p + '.jpg';
+      const buf = canvas.toBuffer('image/webp', 90);
+      const name = 'page' + p + '.webp';
       fs.writeFileSync(path.join(labDir, name), buf);
       pages.push('labs/lab' + lab.number + '/' + name);
       process.stdout.write(`\r  ${lab.file} page ${p}/${doc.numPages} (${Math.round(buf.length / 1024)} KB)      `);
