@@ -762,6 +762,7 @@ function gradeCurrent(q) {
 
 /* ----------------------------- Quiz -------------------------------- */
 let quiz = null;
+let quizSel = new Set();
 
 const QUIZ_DIFFS = [
   { id: 'mixed',  label: 'Mixed',   desc: 'A balanced mix of medium & hard questions — skips the trivial true/false confirmations.' },
@@ -782,75 +783,117 @@ function filterQuizPool(pool, diff) {
   if (diff === 'mixed') return pool.filter(q => questionDifficulty(q) !== 'easy');
   return pool.filter(q => questionDifficulty(q) === diff);
 }
-
-function quizScope(scope) {
-  scope = scope || '';
-  const isModule = scope.startsWith('m:');
-  const isLesson = scope.startsWith('l:');
-  let pool = [], title = 'All modules';
-  if (isModule) { const mm = findModule(scope.slice(2)); if (mm) { pool = mm.lessons.flatMap(l => l.quiz); title = mm.name; } }
-  else if (isLesson) { const ll = findLesson(scope.slice(2)); if (ll) { pool = ll.lesson.quiz; title = ll.lesson.title; } }
-  else { pool = DATA.modules.flatMap(m => m.lessons.flatMap(l => l.quiz)); }
-  return { scope, isModule, isLesson, pool, title };
+function collectQuizPool(lessonIds) {
+  let pool = [];
+  for (const id of lessonIds) { const f = findLesson(id); if (f) pool = pool.concat(f.lesson.quiz); }
+  return pool;
 }
 
 function renderQuiz(scope) {
-  const qs = quizScope(scope);
+  // Arriving from a module/lesson button → reset + pre-select.
+  if (scope && scope !== 'mixed') {
+    quizSel = new Set();
+    if (scope.startsWith('m:')) { const mm = findModule(scope.slice(2)); if (mm) mm.lessons.forEach(l => quizSel.add(l.id)); }
+    else if (scope.startsWith('l:')) quizSel.add(scope.slice(2));
+  }
+
   const diff = quizDifficultyPref();
-  const filtered = filterQuizPool(qs.pool, diff);
   const diffMeta = QUIZ_DIFFS.find(d => d.id === diff);
+  const filtered = filterQuizPool(collectQuizPool([...quizSel]), diff);
+  const open = new Set(Store.get('cl.openQuizMods', ['firewall']));
 
   let html = `<div class="lesson-hero"><div>
     <div class="crumb">Self-test</div><h2>Quiz</h2></div></div>
-    <div class="quiz-setup">`;
+    <p class="muted">Tick one or more topics and labs, then pick a difficulty to build a mixed quiz.</p>`;
 
-  // 1 · scope
-  html += `<div class="card mb"><h3 class="setup-h">1 · Choose scope</h3>
-    <div class="quiz-chips">
-      <button class="btn ${!qs.scope ? 'primary' : ''}" data-nav="quiz" data-arg="">All modules</button>
-      ${DATA.modules.map(m => `<button class="btn ${qs.scope === 'm:' + m.id ? 'primary' : ''}" data-nav="quiz" data-arg="m:${m.id}">${m.icon} ${m.short}</button>`).join('')}
-    </div>
-    <div class="muted scope-note">Scope: <b>${esc(qs.title)}</b> · ${qs.pool.length} questions total</div>
-  </div>`;
+  for (const m of DATA.modules) {
+    const topics = m.lessons.filter(l => !l.lab);
+    const labs = m.lessons.filter(l => l.lab);
+    const selCount = m.lessons.filter(l => quizSel.has(l.id)).length;
+    const isOpen = open.has(m.id);
+    html += `<div class="card mb quiz-module">
+      <div class="qm-head" data-qm-toggle="${m.id}">
+        <span class="qm-chev ${isOpen ? 'open' : ''}">▶</span>
+        <span class="qm-name">${m.icon} ${esc(m.name)}</span>
+        <span class="qm-count">${selCount ? selCount + ' selected' : ''}</span>
+      </div>
+      <div class="qm-body ${isOpen ? 'open' : ''}">
+        <div class="qm-actions">
+          <button class="btn sm ghost" data-qm-all="${m.id}">✓ Select all</button>
+          <button class="btn sm ghost" data-qm-none="${m.id}">Clear</button>
+        </div>
+        ${topics.map(quizCheckbox).join('')}
+        ${labs.length ? `<div class="qm-subhead">🧪 Labs</div>` + labs.map(quizCheckbox).join('') : ''}
+      </div>
+    </div>`;
+  }
 
-  // 2 · difficulty
-  html += `<div class="card mb"><h3 class="setup-h">2 · Choose difficulty</h3>
+  html += `<div class="card mb"><h3 class="setup-h">Difficulty</h3>
     <div class="quiz-chips" id="diff-picker">
       ${QUIZ_DIFFS.map(d => `<button class="diff-chip ${diff === d.id ? 'active' : ''}" data-diff="${d.id}">${d.label}</button>`).join('')}
     </div>
     <div class="muted diff-note">${esc(diffMeta.desc)}</div>
   </div>`;
 
-  // 3 · count
   if (filtered.length) {
     const opts = [5, 10, 20, 30];
-    html += `<div class="card mb"><h3 class="setup-h">3 · How many questions?</h3>
-      <div class="quiz-chips">
-        ${opts.filter(c => filtered.length >= c).map(c => `<button class="btn" data-start-quiz="${c}">${c}</button>`).join('')}
-        <button class="btn primary" data-start-quiz="${filtered.length}">All (${filtered.length})</button>
+    html += `<div class="card mb"><h3 class="setup-h">Start mixed quiz</h3>
+      <div class="quiz-counts">
+        ${opts.filter(c => filtered.length >= c).map(c => `<button class="btn primary" data-start-quiz="${c}">${c}</button>`).join('')}
+        <button class="btn" data-start-quiz="${filtered.length}">All (${filtered.length})</button>
       </div>
+      <div class="muted" style="font-size:12.5px;margin-top:10px">${quizSel.size ? quizSel.size + ' topic(s) · ' + filtered.length + ' questions (' + diffMeta.label + ')' : 'No topics selected yet'}</div>
     </div>`;
   } else {
-    html += `<div class="card empty-state">No <b>${esc(diffMeta.label)}</b> questions in this scope — try another difficulty.</div>`;
+    html += `<div class="card empty-state">No <b>${esc(diffMeta.label)}</b> questions in your selection — try another difficulty or add more topics.</div>`;
   }
 
-  html += '</div>';
   el('content').innerHTML = html;
 
-  el('content').querySelectorAll('[data-start-quiz]').forEach(b => {
-    b.onclick = () => startQuiz(qs.scope, parseInt(b.dataset.startQuiz), diff);
+  el('content').querySelectorAll('[data-qm-toggle]').forEach(h => {
+    h.onclick = () => {
+      const id = h.dataset.qmToggle;
+      const o = new Set(Store.get('cl.openQuizMods', ['firewall']));
+      if (o.has(id)) o.delete(id); else o.add(id);
+      Store.set('cl.openQuizMods', [...o]);
+      renderQuiz();
+    };
+  });
+  el('content').querySelectorAll('[data-qm-all]').forEach(b => {
+    b.onclick = () => { const mm = findModule(b.dataset.qmAll); if (mm) mm.lessons.forEach(l => quizSel.add(l.id)); renderQuiz(); };
+  });
+  el('content').querySelectorAll('[data-qm-none]').forEach(b => {
+    b.onclick = () => { const mm = findModule(b.dataset.qmNone); if (mm) mm.lessons.forEach(l => quizSel.delete(l.id)); renderQuiz(); };
+  });
+  el('content').querySelectorAll('[data-lesson-check]').forEach(cb => {
+    cb.onchange = () => {
+      const id = cb.dataset.lessonCheck;
+      if (cb.checked) quizSel.add(id); else quizSel.delete(id);
+      renderQuiz();
+    };
   });
   const picker = el('diff-picker');
   if (picker) picker.querySelectorAll('.diff-chip').forEach(b => {
-    b.onclick = () => { setQuizDifficultyPref(b.dataset.diff); renderQuiz(qs.scope); };
+    b.onclick = () => { setQuizDifficultyPref(b.dataset.diff); renderQuiz(); };
+  });
+  el('content').querySelectorAll('[data-start-quiz]').forEach(b => {
+    b.onclick = () => { if (!b.disabled) startQuiz([...quizSel], parseInt(b.dataset.startQuiz), diff); };
   });
 }
 
-function startQuiz(scope, n, diff) {
-  const qs = quizScope(scope);
-  const pool = shuffle(filterQuizPool(qs.pool, diff)).slice(0, n);
+function quizCheckbox(l) {
+  const on = quizSel.has(l.id);
+  return `<label class="quiz-check ${on ? 'on' : ''}">
+    <input type="checkbox" data-lesson-check="${l.id}" ${on ? 'checked' : ''} />
+    <span class="qc-title">${l.emoji || '📄'} ${esc(l.title)}</span>
+    <span class="qc-count">${l.quiz.length}</span>
+  </label>`;
+}
+
+function startQuiz(lessonIds, n, diff) {
+  const pool = shuffle(filterQuizPool(collectQuizPool(lessonIds), diff)).slice(0, n);
   const diffLabel = (QUIZ_DIFFS.find(d => d.id === diff) || {}).label || 'Mixed';
-  quiz = { scope, label: qs.title, difficulty: diffLabel, questions: pool, i: 0, correct: 0, answers: [] };
+  quiz = { scope: '', label: 'Mixed quiz', difficulty: diffLabel, questions: pool, i: 0, correct: 0, answers: [] };
   renderQuizRun();
 }
 

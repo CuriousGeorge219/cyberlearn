@@ -1,8 +1,20 @@
 const fs = require('fs');
 const path = require('path');
 const { extractPdf, extractPptx } = require('./extract');
+const { LAB_TITLES, CURATED_LAB_QUESTIONS, CURATED_GENERIC_LAB_QUESTIONS, CURATED_DIAGRAM_QUESTIONS } = require('./curated-questions');
 
 const ROOT = __dirname;
+
+// Firewall lab sheets (Labs 1-3 are scanned/image-based; Labs 4-7 have text).
+const FIREWALL_LABS = [
+  { number: 1, file: 'Lab 1.pdf' },
+  { number: 2, file: 'Lab 2.pdf' },
+  { number: 3, file: 'Lab 3.pdf' },
+  { number: 4, file: 'Lab4.pdf' },
+  { number: 5, file: 'Lab5.pdf' },
+  { number: 6, file: 'Lab6.pdf' },
+  { number: 7, file: 'Lab7.pdf' },
+];
 
 // ---------------------------------------------------------------------------
 // Module metadata
@@ -553,6 +565,78 @@ function computeTopics(blocks) {
 }
 
 // ---------------------------------------------------------------------------
+// Lab content + curated question integration
+// ---------------------------------------------------------------------------
+async function buildLabLesson(number, file) {
+  const labDir = path.join(ROOT, 'Firewall LAB');
+  const fp = path.join(labDir, file);
+  const title = LAB_TITLES[number] || ('Lab ' + number);
+  const id = 'firewall-lab-' + number;
+
+  let blocks = [];
+  let flashcards = [];
+  let quiz = [];
+
+  if (fs.existsSync(fp)) {
+    const rawText = await extractPdf(fp);
+    const lines = cleanLines(rawText);
+    blocks = parseBlocks(lines);
+    const k = extractKnowledge(blocks);
+    flashcards = k.flashcards;
+    quiz = k.quiz;
+  }
+
+  const hasContent = blocks.some(b =>
+    b.type === 'heading' || b.type === 'p' || (b.type === 'bullets' && b.items && b.items.length));
+  if (!hasContent) {
+    blocks = [{ type: 'p', text: 'This lab sheet is image-based (scanned). Review the PDF for the full step-by-step instructions.' }];
+    flashcards = [];
+    quiz = [];
+  }
+
+  // Curated questions: Labs 1-3 get generic firewall-lab questions; 4-7 get lab-specific.
+  const curated = number <= 3 ? CURATED_GENERIC_LAB_QUESTIONS : (CURATED_LAB_QUESTIONS[number] || []);
+  for (const q of curated) {
+    quiz.push(Object.assign({}, q, { id: hashStr('curated|' + id + '|' + q.q + '|' + (q.stem || '')) }));
+  }
+
+  flashcards.forEach(f => { f.id = hashStr('firewall-lab|' + title + '|' + f.front + '|' + f.back); });
+  quiz.forEach((q, qi) => { if (!q.id) q.id = hashStr('firewall-lab|' + title + '|q' + qi + '|' + q.q + '|' + (q.stem || '')); });
+
+  return {
+    id,
+    order: 100 + number,
+    title,
+    lab: true,
+    labNumber: number,
+    emoji: '🧪',
+    file,
+    blocks, flashcards, quiz,
+    takeaways: computeTakeaways(flashcards),
+    topics: computeTopics(blocks),
+  };
+}
+
+function distributeDiagramQuestions(lessons) {
+  const rules = [
+    [/topolog|star|bus|mesh|ring/i, /Topic B/i],
+    [/dmz|perimeter|public web|firewall/i, /Topic A/i],
+    [/ids|ips|intrusion/i, /Topic E/i],
+    [/osi|layer|transport/i, /Topic B/i],
+  ];
+  const fallback = lessons.find(l => /Topic A/i.test(l.title));
+  for (const q of CURATED_DIAGRAM_QUESTIONS) {
+    const hay = ((q.q || '') + ' ' + (q.explanation || '')).toLowerCase();
+    let target = null;
+    for (const [kw, titleRe] of rules) {
+      if (kw.test(hay)) { target = lessons.find(l => titleRe.test(l.title)); if (target) break; }
+    }
+    target = target || fallback;
+    if (target) target.quiz.push(Object.assign({}, q, { id: hashStr('diagram|' + q.q) }));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 (async () => {
@@ -591,6 +675,17 @@ function computeTopics(blocks) {
       });
       console.log(`${m.id}/${i + 1}  ${meta.title.slice(0, 60).padEnd(62)} fc=${flashcards.length} quiz=${quiz.length}`);
     }
+
+    // Firewall module: append lab lessons + diagram questions
+    if (m.id === 'firewall') {
+      for (const lab of FIREWALL_LABS) {
+        const labLesson = await buildLabLesson(lab.number, lab.file);
+        lessons.push(labLesson);
+        console.log(`firewall/lab${lab.number}  ${labLesson.title.slice(0, 60).padEnd(62)} fc=${labLesson.flashcards.length} quiz=${labLesson.quiz.length}`);
+      }
+      distributeDiagramQuestions(lessons);
+    }
+
     course.modules.push({ ...m, lessons });
   }
 

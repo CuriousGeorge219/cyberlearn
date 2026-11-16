@@ -6,7 +6,7 @@ An interactive, gamified study platform for cybersecurity course content, built 
 |---|---|---|---|---|---|
 | CyberOps Associate | CSO | Cisco CyberOps Associate v1.0 | 28 | ~1,960 | ~1,390 |
 | Network Analysis & Forensics | NAF | Packet analysis & forensics | 12 | ~740 | ~590 |
-| Firewall Technologies | Firewall | Perimeter defence, VPN, IDS, DR | 10 | ~300 | ~290 |
+| Firewall Technologies | Firewall | Perimeter defence, VPN, IDS, DR + 7 labs | 10 + 7 labs | ~460 | ~480 |
 | AI in Cybersecurity | AIC | ML, GenAI, agentic AI & ethical hacking | 10 | ~600 | ~510 |
 
 ## ✨ Features
@@ -14,7 +14,8 @@ An interactive, gamified study platform for cybersecurity course content, built 
 - **Study / Read mode** — clean lesson reader with key-terms highlighted inline, a **"Key takeaways"** summary, and a **lesson roadmap**.
 - **Active recall mode** — bullet points blur until you click to reveal, forcing recall before seeing the answer.
 - **Flashcards + spaced repetition** — a full SM-2 scheduler (Again / Hard / Good / Easy) that spaces reviews over days. Keyboard: `Space` flip, `1–4` grade.
-- **Quizzes** — multiple choice, true/false, and fill-in-the-blank with instant feedback, explanations, and selectable difficulty (Easy / Medium / Hard / Mixed).
+- **Quizzes** — multiple choice, true/false, and fill-in-the-blank with instant feedback, explanations, selectable difficulty (Easy / Medium / Hard / Mixed), and **mixed quizzes** by multi-selecting any topics and labs.
+- **🧪 Firewall labs** — 7 lab sheets (ASA/ASDM, DMZ, Easy VPN, site-to-site VPN) with **command-based** ("what does this command do", "which command for this task") and **diagram-based** questions, plus general diagram reasoning questions.
 - **🧩 Concept diagrams** — 17 hand-built visual diagrams (OSI model, TCP handshake, CIA triad, PKI, encryption, NAT, SOC flow, forensics, and more), linked automatically from the lessons they relate to.
 - **🎮 Gamification** — earn XP for every lesson, card, and quiz; rank up from *Script Kiddie* to *CISO*; unlock 16 achievements; build a daily streak.
 - **☁️ Cross-device sync** — optionally sync all progress between devices by entering a **sync key** (the backend is pre-configured; no setup required).
@@ -58,6 +59,7 @@ Use the **same key** on every device to share progress. The sync key acts like a
 
 ```
 ├── build-data.js                 ← extracts text + generates cards/quizzes
+├── curated-questions.js          ← hand-written lab command & diagram questions
 ├── extract.js                    ← PDF & PPTX text extraction helpers
 ├── server.js                     ← tiny local HTTP server
 ├── sync-worker.js                ← Cloudflare Worker for cross-device sync

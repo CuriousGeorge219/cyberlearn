@@ -423,6 +423,37 @@ b.term { color: var(--accent-2); font-weight: 700; }
 .sync-status { margin-top: 14px; font-size: 13px; color: var(--text-dim); padding: 9px 12px; background: var(--panel-2); border-radius: 9px; }
 
 /* =====================================================================
+   Quiz multi-select (topics + labs)
+   ===================================================================== */
+.quiz-module { padding: 0; overflow: hidden; }
+.qm-head {
+  display: flex; align-items: center; gap: 10px; padding: 14px 16px;
+  cursor: pointer; user-select: none; font-weight: 600;
+}
+.qm-head:hover { background: var(--panel-2); }
+.qm-chev { font-size: 11px; color: var(--text-faint); transition: transform 0.15s; flex: none; }
+.qm-chev.open { transform: rotate(90deg); }
+.qm-name { flex: 1; min-width: 0; }
+.qm-count { font-size: 12px; color: var(--green); font-weight: 600; white-space: nowrap; }
+.qm-body { display: none; padding: 2px 16px 14px; border-top: 1px solid var(--border-soft); }
+.qm-body.open { display: block; }
+.qm-actions { display: flex; gap: 8px; padding: 12px 0 8px; }
+.qm-subhead { font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-faint); font-weight: 600; margin: 10px 0 4px; }
+
+.quiz-check {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: 8px; cursor: pointer; transition: background 0.12s;
+}
+.quiz-check:hover { background: var(--panel-2); }
+.quiz-check.on { background: rgba(34, 211, 238, 0.07); }
+.quiz-check input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; flex: none; }
+.qc-title { flex: 1; min-width: 0; font-size: 13.5px; }
+.qc-count { font-size: 11px; color: var(--text-faint); background: var(--panel-3); padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+
+.quiz-counts { display: flex; gap: 10px; flex-wrap: wrap; }
+.quiz-counts .btn { min-width: 60px; justify-content: center; }
+
+/* =====================================================================
    Collapsible sidebar (rail mode) — desktop only
    ===================================================================== */
 #sidebar { transition: width 0.2s ease, min-width 0.2s ease; }
