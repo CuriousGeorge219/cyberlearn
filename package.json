@@ -9,6 +9,7 @@
     "deploy": "npx wrangler pages deploy public --project-name=cyberlearn"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.1.1",
     "jszip": "^3.10.2",
     "pdfjs-dist": "^6.5.438"
   }

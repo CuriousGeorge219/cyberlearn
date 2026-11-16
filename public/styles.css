@@ -453,6 +453,15 @@ b.term { color: var(--accent-2); font-weight: 700; }
 .quiz-counts { display: flex; gap: 10px; flex-wrap: wrap; }
 .quiz-counts .btn { min-width: 60px; justify-content: center; }
 
+/* Lab sheet page images */
+.lab-sheets { display: flex; flex-direction: column; gap: 14px; }
+.lab-sheet { margin: 0; text-align: center; }
+.lab-sheet img {
+  width: 100%; max-width: 760px; border-radius: 10px;
+  border: 1px solid var(--border); background: #fff; box-shadow: var(--shadow);
+}
+.lab-sheet figcaption { font-size: 11.5px; color: var(--text-faint); margin-top: 6px; }
+
 /* =====================================================================
    Collapsible sidebar (rail mode) — desktop only
    ===================================================================== */

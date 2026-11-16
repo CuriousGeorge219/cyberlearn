@@ -589,6 +589,17 @@ function renderLesson(id) {
   if (!l.blocks.length) html += '<p class="muted">This deck is primarily diagram/visual based — review the original slides for the full detail.</p>';
   html += '</div>';
 
+  // Lab sheet page images
+  if ((l.images || []).length) {
+    html += `<h2 class="section-title">📄 Lab sheet</h2>
+      <p class="muted" style="font-size:12.5px">Tap a page to view it full-size. Follow the pages in order for the full lab steps.</p>
+      <div class="lab-sheets">`;
+    l.images.forEach((src, i) => {
+      html += `<figure class="lab-sheet"><a href="${src}" target="_blank"><img src="${src}" loading="lazy" alt="Lab page ${i + 1}" /></a><figcaption>Page ${i + 1} of ${l.images.length}</figcaption></figure>`;
+    });
+    html += '</div>';
+  }
+
   // Related diagrams
   if (diagrams.length) {
     html += `<h2 class="section-title">🧩 Related diagrams</h2><div class="diagram-grid">`;

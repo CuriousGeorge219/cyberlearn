@@ -16,6 +16,15 @@ const FIREWALL_LABS = [
   { number: 7, file: 'Lab7.pdf' },
 ];
 
+// Rendered page images (public/labs/manifest.json), keyed by lab number.
+let LAB_IMAGES = {};
+try {
+  const manifestPath = path.join(ROOT, 'public', 'labs', 'manifest.json');
+  if (fs.existsSync(manifestPath)) {
+    LAB_IMAGES = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  }
+} catch (e) { /* ignore — labs just won't show images */ }
+
 // ---------------------------------------------------------------------------
 // Module metadata
 // ---------------------------------------------------------------------------
@@ -589,7 +598,7 @@ async function buildLabLesson(number, file) {
   const hasContent = blocks.some(b =>
     b.type === 'heading' || b.type === 'p' || (b.type === 'bullets' && b.items && b.items.length));
   if (!hasContent) {
-    blocks = [{ type: 'p', text: 'This lab sheet is image-based (scanned). Review the PDF for the full step-by-step instructions.' }];
+    blocks = [{ type: 'p', text: 'This lab sheet is provided as page images below — scroll through the pages for the full step-by-step instructions.' }];
     flashcards = [];
     quiz = [];
   }
@@ -611,6 +620,7 @@ async function buildLabLesson(number, file) {
     labNumber: number,
     emoji: '🧪',
     file,
+    images: (LAB_IMAGES && LAB_IMAGES[number]) || [],
     blocks, flashcards, quiz,
     takeaways: computeTakeaways(flashcards),
     topics: computeTopics(blocks),
